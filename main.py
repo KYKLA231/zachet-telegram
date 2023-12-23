@@ -1,11 +1,18 @@
 import telebot
 import random
 from telebot import types
-bot = telebot.TeleBot('')
+
+
+bot = telebot.TeleBot('6963485677:AAFr8oKrp3MdUgDjVxQgfEmlFZJqdVFuiVg')
+
+
 @bot.message_handler(commands=['start'])
 def start(message):
     text = f'<b>Привет! {message.from_user.first_name} я бот для генерации паролей, для начала напиши комманду /createpass</b>'
+  
     bot.send_message(message.chat.id, text, parse_mode='html')
+
+
 @bot.message_handler(commands=['createpass'])
 def createpass(message):
     keyboard = types.ReplyKeyboardMarkup(row_width=1)
@@ -13,8 +20,12 @@ def createpass(message):
     keyboard.add(button_exit)
     msg = bot.send_message(message.chat.id, 'Введите кол-во символов для пароля:', reply_markup=keyboard)
     bot.register_next_step_handler(msg, handle_choice)
+
+
 def generate_password(message):
     length = int(message.text)
+
+
     password = ''.join(random.choices('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', k=length))
     keyboard = types.ReplyKeyboardMarkup(row_width=1)
     button_good = types.KeyboardButton(text='Спасибо')
