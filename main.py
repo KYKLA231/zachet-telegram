@@ -1,50 +1,61 @@
-import telebot
 import random
-from telebot import types
+import string
+from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ConversationHandler
 
+LENGTH, CHOICE = range(2)
 
-bot = telebot.TeleBot('6963485677:AAFr8oKrp3MdUgDjVxQgfEmlFZJqdVFuiVg')
+def generate_password(length):
+    characters = string.ascii_letters + string.digits + string.punctuation
+    password = ''.join(random.choice(characters) for _ in range(length))
+    return password
 
+def start(update, context):
+    context.bot.send_message(chat_id=update.effective_chat.id, text="Привет! Я бот-генератор паролей. Введите /password, чтобы начать генерацию пароля.")
 
-@bot.message_handler(commands=['start'])
-def start(message):
-    text = f'<b>Привет! {message.from_user.first_name} я бот для генерации паролей, для начала напиши комманду /createpass</b>'
-  
-    bot.send_message(message.chat.id, text, parse_mode='html')
+def password_start(update, context):
+    reply_keyboard = [['Хорошо', 'Еще вариант']]
+    context.bot.send_message(chat_id=update.effective_chat.id, text="Введите длину пароля:", reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
+    return LENGTH
 
+def password_length(update, context):
+    length = int(update.message.text)
+    password = generate_password(length)
+    context.user_data['password'] = password
+    reply_keyboard = [['Хорошо', 'Еще вариант']]
+    context.bot.send_message(chat_id=update.effective_chat.id, text=f"Ваш пароль: {password}", reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
+    return CHOICE
 
-@bot.message_handler(commands=['createpass'])
-def createpass(message):
-    keyboard = types.ReplyKeyboardMarkup(row_width=1)
-    button_exit =types.KeyboardButton("Выход")
-    keyboard.add(button_exit)
-    msg = bot.send_message(message.chat.id, 'Введите кол-во символов для пароля:', reply_markup=keyboard)
-    bot.register_next_step_handler(msg, handle_choice)
+def password_choice(update, context):
+    choice = update.message.text
+    if choice == 'Хорошо':
+        context.bot.send_message(chat_id=update.effective_chat.id, text="Отлично! Если вам нужен еще пароль, введите /password.")
+        return ConversationHandler.END
+    elif choice == 'Еще вариант':
+        return password_start(update, context)
 
+def cancel(update, context):
+    context.bot.send_message(chat_id=update.effective_chat.id, text="Генерация пароля отменена.", reply_markup=ReplyKeyboardRemove())
+    return ConversationHandler.END
 
-def generate_password(message):
-    length = int(message.text)
+def main():
+    updater = Updater(token='6963485677:AAFr8oKrp3MdUgDjVxQgfEmlFZJqdVFuiVg', use_context=True)
+    dispatcher = updater.dispatcher
 
+    start_handler = CommandHandler('start', start)
+    password_handler = ConversationHandler(
+        entry_points=[CommandHandler('password', password_start)],
+        states={
+            LENGTH: [MessageHandler(Filters.text, password_length)],
+            CHOICE: [MessageHandler(Filters.text, password_choice)]
+        },
+        fallbacks=[CommandHandler('cancel', cancel)]
+    )
 
-    password = ''.join(random.choices('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', k=length))
-    keyboard = types.ReplyKeyboardMarkup(row_width=1)
-    button_good = types.KeyboardButton(text='Спасибо')
-    button_another = types.KeyboardButton(text='Еще вариант')
-    button_exit =types.KeyboardButton("Выход")
-        
-    keyboard.add(button_good, button_another, button_exit)
-    msg = bot.send_message(message.chat.id, f'Сгенерированный пароль: {password}', reply_markup=keyboard)
-    bot.register_next_step_handler(msg, handle_choice)
+    dispatcher.add_handler(start_handler)
+    dispatcher.add_handler(password_handler)
 
-    def handle_choice(message):
-     if message.text.isnumeric():
-        generate_password(message)
-     elif message.text == 'Спасибо':
-        bot.send_message(message.chat.id, 'Незачто я всего бот!)')
-        start(message)
-     elif message.text == 'Еще вариант':
-        msg = bot.send_message(message.chat.id, 'Введите, какой длины нужен новый пароль:')
-        bot.register_next_step_handler(msg, generate_password)
-     elif message.text=="Выход":
-        start(message)
-        bot.polling()
+    updater.start_polling()
+
+if __name__ == '__main__':
+    main()
