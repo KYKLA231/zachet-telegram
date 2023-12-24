@@ -38,6 +38,12 @@ def cancel(update, context):
     context.bot.send_message(chat_id=update.effective_chat.id, text="Генерация пароля отменена.", reply_markup=ReplyKeyboardRemove())
     return ConversationHandler.END
 
+def help_command(update, context):
+    context.bot.send_message(chat_id=update.effective_chat.id, text="Список доступных команд:\n"
+                                                                    "/start - начать генерацию пароля\n"
+                                                                    "/help - получить список команд\n"
+                                                                    "/password - сгенерировать новый пароль")
+
 def main():
     updater = Updater(token='6963485677:AAFr8oKrp3MdUgDjVxQgfEmlFZJqdVFuiVg', use_context=True)
     dispatcher = updater.dispatcher
@@ -51,9 +57,11 @@ def main():
         },
         fallbacks=[CommandHandler('cancel', cancel)]
     )
+    help_handler = CommandHandler('help', help_command)
 
     dispatcher.add_handler(start_handler)
     dispatcher.add_handler(password_handler)
+    dispatcher.add_handler(help_handler)
 
     updater.start_polling()
 
